@@ -14,27 +14,27 @@ defmodule Mongo.TopologyDescription do
   @type type :: :unknown | :single | :replica_set_no_primary |
                 :replica_set_with_primary | :sharded
   @type t :: %{
-                   type: type,
-               set_name: String.t | nil,
-        max_set_version: non_neg_integer | nil,
-        max_election_id: BSON.ObjectId.t,
-                servers: %{required(String.t) => Mongo.ServerDescription.t},
-             compatible: boolean,
+    type: type,
+    set_name: String.t | nil,
+    max_set_version: non_neg_integer | nil,
+    max_election_id: BSON.ObjectId.t,
+    servers: %{required(String.t) => Mongo.ServerDescription.t},
+    compatible: boolean,
     compatibility_error: String.t | nil,
-     local_threshold_ms: non_neg_integer
+    local_threshold_ms: non_neg_integer
   }
 
   def defaults(map \\ %{}) do
     default_servers = %{"localhost:27017" => ServerDescription.defaults(%{})}
     Map.merge(%{
-                     type: :unknown,
-                 set_name: nil,
-          max_set_version: nil,
-          max_election_id: nil,
-                  servers: default_servers,
-               compatible: true,
+      type: :unknown,
+      set_name: nil,
+      max_set_version: nil,
+      max_election_id: nil,
+      servers: default_servers,
+      compatible: true,
       compatibility_error: nil,
-       local_threshold_ms: 15
+      local_threshold_ms: 15
     }, map)
   end
 

@@ -28,15 +28,7 @@ defmodule Mongo.Protocol do
     # TODO: with/else in elixir 1.3
     result =
       with {:ok, s} <- tcp_connect(opts, s) do
-        inner_result = if opts[:skip_auth] do
-          {:ok, s}
-        else
-          with  {:ok, s} <- wire_version(s),
-                {:ok, s} <- Mongo.Auth.run(opts, s) do
-            {:ok, s}
-          end
-        end
-
+        inner_result = build_auth_connect(opts, s)
         :ok = :inet.setopts(s.socket, active: :once)
         inner_result
       end
@@ -50,6 +42,16 @@ defmodule Mongo.Protocol do
         {:error, Mongo.Error.exception(tag: :tcp, action: "send", reason: reason)}
       {:error, reason} ->
         {:error, reason}
+    end
+  end
+
+  defp build_auth_connect(opts, s) do
+    if opts[:skip_auth] do
+      {:ok, s}
+    else
+      with {:ok, s} <- wire_version(s),
+           {:ok, s} <- Mongo.Auth.run(opts, s),
+      do: {:ok, s}
     end
   end
 
@@ -132,9 +134,8 @@ defmodule Mongo.Protocol do
 
   def handle_execute(%Mongo.Query{action: action, extra: extra}, params, opts, s) do
     :ok = :inet.setopts(s.socket, [active: false])
-    with {:ok, reply, new_s} <- handle_execute(action, extra, params, opts, %{
-           s | database: Keyword.get(opts, :database, s.database)
-         }) do
+    s_with_database = %{s | database: Keyword.get(opts, :database, s.database)}
+    with {:ok, reply, new_s} <- handle_execute(action, extra, params, opts, s_with_database) do
       :ok = :inet.setopts(s.socket, [active: :once])
       {:ok, reply, Map.put(new_s, :database, s.database)}
     end

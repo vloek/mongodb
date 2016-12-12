@@ -74,14 +74,15 @@ defmodule Mongo.Topology do
       set_name != nil and not type in [:replica_set_no_primary, :single] ->
         {:stop, :set_name_bad_topology}
       true ->
+        servers_list = seeds |> Enum.map(fn addr ->
+          {addr, ServerDescription.defaults(%{address: addr, type: :unknown})}
+        end) |> Enum.into(%{})
+
         state = %{
           topology: TopologyDescription.defaults(%{
             type: type,
             set_name: set_name,
-            servers: seeds |> Enum.map(fn addr ->
-              {addr,
-               ServerDescription.defaults(%{address: addr, type: :unknown})}
-            end) |> Enum.into(%{}),
+            servers: servers_list,
             local_threshold_ms: local_threshold_ms
           }),
           seeds: seeds,
@@ -113,9 +114,9 @@ defmodule Mongo.Topology do
     new_state = handle_server_description(state, server_description)
     if state.topology != new_state.topology do
       :ok = GenEvent.notify(Mongo.Events, %TopologyDescriptionChangedEvent{
-                topology_pid: self,
-        previous_description: state.topology,
-             new_description: new_state.topology
+              topology_pid: self,
+              previous_description: state.topology,
+              new_description: new_state.topology
       })
       {:reply, :ok, new_state}
     else
@@ -124,12 +125,12 @@ defmodule Mongo.Topology do
   end
 
   def handle_cast({:force_check, server_address}, state) do
-    case Map.get(state.monitors, server_address) do
-      monitor_pid when is_pid(monitor_pid) ->
+    case Map.fetch(state.monitors, server_address) do
+      {:ok, monitor_pid} when is_pid(monitor_pid) ->
         :ok = Monitor.force_check(monitor_pid)
         {:noreply, state}
 
-      _ ->
+      :error ->
         # ignore force checks on monitors that don't exist
         {:noreply, state}
     end

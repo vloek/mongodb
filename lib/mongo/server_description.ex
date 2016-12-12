@@ -5,44 +5,44 @@ defmodule Mongo.ServerDescription do
   @type type :: :standalone | :mongos | :possible_primary | :rs_primary |
                 :rs_secondary | :rs_arbiter | :rs_other | :rs_ghost | :unknown
   @type t :: %{
-             address: String.t | nil,
-               error: String.t | nil,
-     round_trip_time: non_neg_integer | nil,
-     last_write_date: BSON.DateTime.t,
-             op_time: BSON.ObjectId.t | nil,
-                type: type,
+    address: String.t | nil,
+    error: String.t | nil,
+    round_trip_time: non_neg_integer | nil,
+    last_write_date: BSON.DateTime.t,
+    op_time: BSON.ObjectId.t | nil,
+    type: type,
     min_wire_version: non_neg_integer, max_wire_version: non_neg_integer,
-                  me: String.t | nil,
-               hosts: [String.t],
-            passives: [String.t],
-            arbiters: [String.t],
-             tag_set: %{String.t => String.t},
-            set_name: String.t | nil,
-         set_version: non_neg_integer | nil,
-         election_id: BSON.ObjectId.t | nil,
-             primary: String.t | nil,
+    me: String.t | nil,
+    hosts: [String.t],
+    passives: [String.t],
+    arbiters: [String.t],
+    tag_set: %{String.t => String.t},
+    set_name: String.t | nil,
+    set_version: non_neg_integer | nil,
+    election_id: BSON.ObjectId.t | nil,
+    primary: String.t | nil,
     last_update_time: non_neg_integer
   }
 
   def defaults(map \\ %{}) do
     Map.merge(%{
-               address: "localhost:27017",
-                 error: nil,
-       round_trip_time: nil,
-       last_write_date: nil,
-               op_time: nil,
-                  type: :unknown,
+      address: "localhost:27017",
+      error: nil,
+      round_trip_time: nil,
+      last_write_date: nil,
+      op_time: nil,
+      type: :unknown,
       min_wire_version: 0,
       max_wire_version: 0,
-                    me: nil,
-                 hosts: [],
-              passives: [],
-              arbiters: [],
-               tag_set: %{},
-              set_name: nil,
-           set_version: nil,
-           election_id: nil,
-               primary: nil,
+      me: nil,
+      hosts: [],
+      passives: [],
+      arbiters: [],
+      tag_set: %{},
+      set_name: nil,
+      set_version: nil,
+      election_id: nil,
+      primary: nil,
       last_update_time: 0
     }, map)
   end
@@ -92,14 +92,14 @@ defmodule Mongo.ServerDescription do
       is_master_reply["isreplicaset"] == true ->
         :rs_ghost
       is_master_reply["setName"] != nil ->
-        cond do
-          is_master_reply["ismaster"] == true ->
+        case is_master_reply do
+          %{"ismaster" => true} ->
             :rs_primary
-          is_master_reply["secondary"] == true ->
+          %{"secondary" => true} ->
             :rs_secondary
-          is_master_reply["arbiterOnly"] == true ->
+          %{"arbiterOnly" => true} ->
             :rs_arbiter
-          true ->
+          _ ->
             :rs_other
         end
       true ->
