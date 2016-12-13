@@ -158,8 +158,7 @@ defmodule Mongo.Protocol do
   defp handle_execute(:get_more, {coll, cursor_id}, [], opts, s) do
     num_return = Keyword.get(opts, :batch_size, 0)
 
-    op_get_more(coll: Utils.namespace(coll, s), cursor_id: cursor_id,
-                num_return: num_return)
+    op_get_more(coll: Utils.namespace(coll, s), cursor_id: cursor_id, num_return: num_return)
     |> message_reply(s)
   end
 
@@ -195,22 +194,19 @@ defmodule Mongo.Protocol do
 
   defp handle_execute(:replace_one, coll, [query, replacement], opts, s) do
     flags  = flags(Keyword.take(opts, @update_flags))
-    op     = op_update(coll: Utils.namespace(coll, s), query: query, update: replacement,
-                       flags: flags)
+    op     = op_update(coll: Utils.namespace(coll, s), query: query, update: replacement, flags: flags)
     message_gle(-15, op, opts, s)
   end
 
   defp handle_execute(:update_one, coll, [query, update], opts, s) do
     flags  = flags(Keyword.take(opts, @update_flags))
-    op     = op_update(coll: Utils.namespace(coll, s), query: query, update: update,
-                       flags: flags)
+    op     = op_update(coll: Utils.namespace(coll, s), query: query, update: update, flags: flags)
     message_gle(-16, op, opts, s)
   end
 
   defp handle_execute(:update_many, coll, [query, update], opts, s) do
     flags  = [:multi | flags(Keyword.take(opts, @update_flags))]
-    op     = op_update(coll: Utils.namespace(coll, s), query: query, update: update,
-                       flags: flags)
+    op     = op_update(coll: Utils.namespace(coll, s), query: query, update: update, flags: flags)
     message_gle(-17, op, opts, s)
   end
 

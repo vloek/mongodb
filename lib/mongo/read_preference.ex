@@ -1,4 +1,6 @@
 defmodule Mongo.ReadPreference do
+  @moduledoc false
+
   @type t :: %{
     mode: :primary | :secondary | :primary_preferred | :secondary_preferred |
           :nearest,

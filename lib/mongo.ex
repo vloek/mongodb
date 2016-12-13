@@ -687,7 +687,7 @@ defmodule Mongo do
 
   defp select_servers(topology_pid, type, opts) do
     topology = Topology.topology(topology_pid)
-    start_time = System.system_time
+    start_time = System.monotonic_time
     _select_servers(topology, type, opts, start_time)
   end
 

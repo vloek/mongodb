@@ -66,9 +66,11 @@ defmodule Mongo.TopologyDescription do
           {topology.servers,
            type != :write and server.type != :mongos, server.type == :mongos}
         :sharded ->
-          {topology.servers |> Enum.filter(fn {_, server} ->
-             server.type == :mongos
-           end), false, true}
+          mongos_servers = topology.servers |> Enum.filter(fn {_, server} ->
+            server.type == :mongos
+          end)
+
+          {mongos_servers, false, true}
         _ ->
           case type do
             :read ->
@@ -86,17 +88,18 @@ defmodule Mongo.TopologyDescription do
           end
       end
 
-      {:ok, Enum.map(servers, fn
-         {server, _} -> server
-       end), slave_ok, mongos?}
+      present_servers = Enum.map(servers, fn
+        {server, _} -> server
+      end)
+
+      {:ok, present_servers, slave_ok, mongos?}
     end
   end
 
   ## Private Functions
 
-  defp select_replica_set_server(topology, mode, read_preference)
-      when mode in [:primary, :primary_preferred] do
-    primary = topology.servers |> Enum.filter(fn {_, server} ->
+  defp select_replica_set_server(topology, mode, read_preference) when mode in [:primary, :primary_preferred] do
+    primary = Enum.filter(topology.servers, fn {_, server} ->
       server.type == :rs_primary
     end)
 
@@ -447,16 +450,10 @@ defmodule Mongo.TopologyDescription do
 
   defp handle_election_id(topology, server_description) do
     # yes, this is really in the spec
-    if server_description[:set_version] != nil and
-       server_description[:election_id] != nil do
-      if topology[:max_set_version] != nil and
-         topology[:max_election_id] != nil and
-         ((topology.max_set_version >
-           server_description.set_version) or
-          ((topology.max_set_version ==
-            server_description.set_version) and
-           (topology.max_election_id >
-            server_description.election_id))) do
+    if version_and_election_id_present?(server_description) do
+      if max_version_and_max_election_id_present?(topology) and
+         correct_version_and_election_id?(topology, server_description) do
+
         put_in(topology.servers[server_description.address],
                ServerDescription.defaults(%{
                  address: server_description.address
@@ -470,6 +467,21 @@ defmodule Mongo.TopologyDescription do
       topology |> continue(server_description)
     end
   end
+
+  defp version_and_election_id_present?(server_description) do
+    server_description[:set_version] != nil and server_description[:election_id] != nil
+  end
+
+  defp max_version_and_max_election_id_present?(topology) do
+    topology[:max_set_version] != nil and topology[:max_election_id] != nil
+  end
+
+  defp correct_version_and_election_id?(topology, server_description) do
+    (topology.max_set_version > server_description.set_version) or
+     ((topology.max_set_version == server_description.set_version) and
+      (topology.max_election_id > server_description.election_id))
+  end
+
 
   defp continue(topology, server_description) do
     topology
